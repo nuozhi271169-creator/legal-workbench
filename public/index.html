@@ -15,7 +15,8 @@
     .header h1 { font-size: 1.6rem; font-weight: 600; }
     .header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
     .main { display: grid; grid-template-columns: 1fr 400px; gap: 16px; }
-    #calendar { background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); height: 720px; }
+    #calendar { background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); height: 420px; }
+    .timeline-tool { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-top: 16px; }
     .sidebar { display: flex; flex-direction: column; gap: 14px; }
     .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .card h2 { font-size: 1.05rem; margin-bottom: 12px; color: #0f172a; }
@@ -58,7 +59,19 @@
     </div>
 
     <div class="main">
-      <div id="calendar"></div>
+      <div>
+        <div id="calendar"></div>
+        <div class="timeline-tool">
+          <h2 style="font-size:1.05rem; margin-bottom:12px; color:#0f172a;">📄 法律事实时间线分析</h2>
+          <p style="font-size:13px; color:#64748b; margin-bottom:10px;">粘贴合同、起诉状、证据材料等文档内容，生成分析提示词后发给「法律工作台助手」机器人。</p>
+          <textarea id="docContent" placeholder="在此粘贴文档全文..." rows="8" style="width:100%; margin-bottom:8px;"></textarea>
+          <div style="display:flex; gap:8px;">
+            <button onclick="generateTimelinePrompt()" class="btn-green">生成时间线分析提示词</button>
+            <button onclick="clearDoc()">清空</button>
+          </div>
+          <div id="timeline-result" style="margin-top:12px; background:#f8fafc; border-left:4px solid #1e40af; padding:12px; border-radius:8px; min-height:60px; white-space:pre-wrap; font-size:13.5px; display:none;"></div>
+        </div>
+      </div>
       <div class="sidebar">
         <!-- 添加事项 -->
         <div class="card">
@@ -365,7 +378,37 @@
       await loadAllData();
     }
 
-    function quickSearch() {
+    function generateTimelinePrompt() {
+      const content = document.getElementById('docContent').value.trim();
+      if (!content) return alert('请先粘贴文档内容');
+      const today = new Date().toLocaleDateString('zh-CN');
+      const prompt = `你是一位专业的中国律师AI助手，擅长从法律文书中提取事实并构建时间线。
+
+请仔细阅读以下文档内容，完成两项任务：
+
+1. 【关键法律事实时间线】：按时间顺序梳理文档中的核心法律事实、事件、行为，标注大致日期或时间节点（如有），并简要说明每个事实的法律意义。
+2. 【相关法律法规对接】：针对梳理出的关键事实，列出可能适用的中国法律法规及具体条文（如《民法典》相关条款、《民事诉讼法》等），并简要说明关联理由。如涉及涉外因素，也可提示国际规则或外国法可能相关之处。
+
+文档内容如下：
+---
+${content}
+---
+
+请用清晰、结构化的格式输出，便于律师快速审阅。生成日期：${today}`;
+      const resultEl = document.getElementById('timeline-result');
+      resultEl.textContent = prompt;
+      resultEl.style.display = 'block';
+      navigator.clipboard?.writeText(prompt).then(() => {
+        alert('提示词已复制到剪贴板！\n请打开「法律工作台助手」机器人，粘贴发送即可。');
+      }).catch(() => {
+        alert('提示词已生成，请手动复制下方内容发给机器人。');
+      });
+    }
+
+    function clearDoc() {
+      document.getElementById('docContent').value = '';
+      document.getElementById('timeline-result').style.display = 'none';
+    }
       const q = document.getElementById('searchInput').value.trim();
       const url = q ? `https://grok.com/?q=${encodeURIComponent(q)}` : 'https://grok.com';
       window.open(url, '_blank');

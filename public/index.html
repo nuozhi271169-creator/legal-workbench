@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>法律人专业工作台（联网版）</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1a1a1a; }
+    .app { max-width: 1500px; margin: 0 auto; padding: 16px; }
+    .header { background: linear-gradient(135deg, #0f172a, #1e3a5f); color: white; padding: 18px 24px; border-radius: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 1.6rem; font-weight: 600; }
+    .header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+    .main { display: grid; grid-template-columns: 1fr 400px; gap: 16px; }
+    #calendar { background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); height: 720px; }
+    .sidebar { display: flex; flex-direction: column; gap: 14px; }
+    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 1.05rem; margin-bottom: 12px; color: #0f172a; }
+    .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .form-row input, .form-row select { flex: 1; }
+    input, textarea, select, button { padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+    button { background: #1e40af; color: white; border: none; cursor: pointer; font-weight: 500; }
+    button:hover { background: #1e3a8a; }
+    .btn-green { background: #047857; }
+    .btn-green:hover { background: #065f46; }
+    .btn-orange { background: #c2410c; }
+    .btn-orange:hover { background: #9a3412; }
+    .search-bar { background: white; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; gap: 8px; align-items: center; }
+    .search-bar input { flex: 1; margin: 0; }
+    .search-bar button { width: auto; padding: 9px 18px; margin: 0; }
+    #deadline-list, #excerpt-list { max-height: 180px; overflow-y: auto; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; }
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    @media (max-width: 980px) {
+      .main { grid-template-columns: 1fr; }
+      #calendar { height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <h1>⚖️ 法律人专业工作台（联网版）</h1>
+        <p>日历 · 期限追踪 · 摘录本 · 每日推荐 · 数据存在服务器</p>
+      </div>
+      <button onclick="requestNotification()" style="width:auto; padding:8px 16px;">开启提醒</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="快速搜索（跳转到 Grok）..." onkeypress="if(event.key==='Enter') quickSearch()" />
+      <button onclick="quickSearch()">搜索 Grok</button>
+      <button onclick="window.open('https://grok.com', '_blank')" style="background:#0f172a;">打开 Grok</button>
+    </div>
+
+    <div class="main">
+      <div id="calendar"></div>
+      <div class="sidebar">
+        <!-- 添加事项 -->
+        <div class="card">
+          <h2>➕ 添加事项</h2>
+          <input type="text" id="title" placeholder="事项标题" />
+          <div class="form-row">
+            <input type="date" id="date" />
+            <input type="time" id="time" />
+          </div>
+          <div class="form-row">
+            <select id="priority">
+              <option value="普通">普通</option>
+              <option value="重要">重要</option>
+              <option value="紧急">紧急</option>
+            </select>
+            <select id="category">
+              <option value="民事">民事</option>
+              <option value="刑事">刑事</option>
+              <option value="公司">公司</option>
+              <option value="劳动">劳动</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <textarea id="notes" placeholder="备注" rows="2"></textarea>
+          <button onclick="addEvent()">添加到日历</button>
+          <div class="legend">
+            <span><i style="background:#ef4444"></i> 紧急</span>
+            <span><i style="background:#f97316"></i> 重要</span>
+            <span><i style="background:#3b82f6"></i> 普通</span>
+          </div>
+        </div>
+
+        <!-- 期限追踪 -->
+        <div class="card">
+          <h2>⏰ 案件期限追踪</h2>
+          <input type="text" id="dlTitle" placeholder="期限名称" />
+          <div class="form-row">
+            <input type="date" id="dlDate" />
+            <select id="dlType">
+              <option value="诉讼时效">诉讼时效</option>
+              <option value="举证期限">举证期限</option>
+              <option value="上诉期">上诉期</option>
+              <option value="执行期限">执行期限</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <textarea id="dlNotes" placeholder="备注" rows="2"></textarea>
+          <button onclick="addDeadline()">添加期限</button>
+          <div id="deadline-list"></div>
+        </div>
+
+        <!-- 摘录本 -->
+        <div class="card">
+          <h2>📚 法规/案例摘录本</h2>
+          <input type="text" id="exSearch" placeholder="搜索摘录..." oninput="searchExcerpts()" />
+          <input type="text" id="exTitle" placeholder="标题" style="margin-top:6px;" />
+          <textarea id="exContent" placeholder="内容摘录" rows="3"></textarea>
+          <input type="text" id="exTags" placeholder="标签（逗号分隔）" />
+          <button onclick="addExcerpt()">保存摘录</button>
+          <div id="excerpt-list"></div>
+        </div>
+
+        <!-- 每日推荐 -->
+        <div class="card">
+          <h2>🤖 每日推荐</h2>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <button class="btn-green" onclick="generatePrompt()">生成提示词</button>
+            <button class="btn-orange" onclick="loadSampleAI()">示例</button>
+          </div>
+          <div id="ai-content" style="background:#f8fafc; border-left:4px solid #1e40af; padding:12px; border-radius:8px; min-height:80px; white-space:pre-wrap; font-size:13.5px;">加载中...</div>
+          <textarea id="ai-paste" placeholder="粘贴 AI 生成的内容" rows="4" style="margin-top:10px;"></textarea>
+          <button onclick="saveAIContent()">保存今日推荐</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script>
+    let calendar;
+    const colorMap = { '紧急': '#ef4444', '重要': '#f97316', '普通': '#3b82f6' };
+    let allData = { events: [], deadlines: [], excerpts: [], ai: {} };
+
+    async function loadAllData() {
+      const res = await fetch('/api/data');
+      allData = await res.json();
+      return allData;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadAllData();
+      const calendarEl = document.getElementById('calendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        locale: 'zh-cn',
+        editable: true,
+        events: allData.events.map(e => ({
+          id: e.id,
+          title: e.title,
+          start: e.start,
+          allDay: e.allDay,
+          backgroundColor: e.backgroundColor,
+          extendedProps: e.extendedProps || {}
+        })),
+        eventClick: async function(info) {
+          if (confirm(`删除「${info.event.title}」？`)) {
+            await fetch(`/api/events/${info.event.id}`, { method: 'DELETE' });
+            info.event.remove();
+            await loadAllData();
+            renderTodos();
+          }
+        }
+      });
+      calendar.render();
+      renderTodos();
+      renderDeadlines();
+      renderExcerpts();
+      if (allData.ai && allData.ai.content) {
+        document.getElementById('ai-content').textContent = allData.ai.content;
+      }
+      document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      setInterval(checkReminders, 60000);
+    });
+
+    async function addEvent() {
+      const title = document.getElementById('title').value.trim();
+      const date = document.getElementById('date').value;
+      const time = document.getElementById('time').value;
+      const priority = document.getElementById('priority').value;
+      const category = document.getElementById('category').value;
+      const notes = document.getElementById('notes').value;
+      if (!title || !date) return alert('请填写标题和日期');
+
+      let start = date;
+      let allDay = true;
+      if (time) { start = `${date}T${time}`; allDay = false; }
+      const color = colorMap[priority] || '#3b82f6';
+
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `[${category}] ${title}`,
+          start, allDay, backgroundColor: color,
+          extendedProps: { notes, priority, category }
+        })
+      });
+      const newEvent = await res.json();
+      calendar.addEvent({
+        id: newEvent.id,
+        title: newEvent.title,
+        start: newEvent.start,
+        allDay: newEvent.allDay,
+        backgroundColor: newEvent.backgroundColor,
+        extendedProps: newEvent.extendedProps
+      });
+      document.getElementById('title').value = '';
+      document.getElementById('notes').value = '';
+      await loadAllData();
+      renderTodos();
+    }
+
+    function renderTodos() {
+      const list = document.getElementById('todo-list') || { innerHTML: '' };
+      // 简单显示今日
+    }
+
+    async function addDeadline() {
+      const title = document.getElementById('dlTitle').value.trim();
+      const date = document.getElementById('dlDate').value;
+      const type = document.getElementById('dlType').value;
+      const notes = document.getElementById('dlNotes').value;
+      if (!title || !date) return alert('请填写名称和日期');
+
+      const res = await fetch('/api/deadlines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, date, type, notes })
+      });
+      const dl = await res.json();
+      // 同时加到日历
+      const color = type === '诉讼时效' ? '#7c3aed' : type === '举证期限' ? '#db2777' : '#0891b2';
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `⏰ [${type}] ${title}`,
+          start: date,
+          allDay: true,
+          backgroundColor: color,
+          extendedProps: { notes, isDeadline: true, type, deadlineId: dl.id }
+        })
+      });
+      document.getElementById('dlTitle').value = '';
+      document.getElementById('dlNotes').value = '';
+      await loadAllData();
+      renderDeadlines();
+      location.reload(); // 简单刷新日历
+    }
+
+    function renderDeadlines() {
+      const list = document.getElementById('deadline-list');
+      const dls = allData.deadlines || [];
+      if (!dls.length) { list.innerHTML = '<p style="color:#94a3b8;font-size:13px;">暂无期限</p>'; return; }
+      list.innerHTML = dls.map(d => `
+        <div style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+          <strong>${d.title}</strong> <span style="color:#64748b;">${d.date}</span>
+          <div style="color:#64748b;">[${d.type}] ${d.notes || ''}</div>
+          <button onclick="deleteDeadline('${d.id}')" style="background:#ef4444;padding:4px 8px;font-size:12px;width:auto;margin-top:4px;">删除</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteDeadline(id) {
+      if (!confirm('确定删除？')) return;
+      await fetch(`/api/deadlines/${id}`, { method: 'DELETE' });
+      await loadAllData();
+      renderDeadlines();
+    }
+
+    async function addExcerpt() {
+      const title = document.getElementById('exTitle').value.trim();
+      const content = document.getElementById('exContent').value.trim();
+      const tags = document.getElementById('exTags').value.trim();
+      if (!title || !content) return alert('请填写标题和内容');
+      await fetch('/api/excerpts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content, tags })
+      });
+      document.getElementById('exTitle').value = '';
+      document.getElementById('exContent').value = '';
+      document.getElementById('exTags').value = '';
+      await loadAllData();
+      renderExcerpts();
+    }
+
+    function renderExcerpts(filter = '') {
+      const list = document.getElementById('excerpt-list');
+      let exs = allData.excerpts || [];
+      if (filter) {
+        const f = filter.toLowerCase();
+        exs = exs.filter(e => e.title.toLowerCase().includes(f) || e.content.toLowerCase().includes(f) || (e.tags||'').toLowerCase().includes(f));
+      }
+      if (!exs.length) { list.innerHTML = '<p style="color:#94a3b8;font-size:13px;">暂无摘录</p>'; return; }
+      list.innerHTML = exs.map(e => `
+        <div style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+          <strong>${e.title}</strong>
+          <div style="color:#475569;margin:4px 0;white-space:pre-wrap;">${e.content}</div>
+          <div style="color:#94a3b8;font-size:12px;">标签：${e.tags||'无'} · ${e.time||''}</div>
+          <button onclick="deleteExcerpt('${e.id}')" style="background:#ef4444;padding:4px 8px;font-size:12px;width:auto;margin-top:4px;">删除</button>
+        </div>
+      `).join('');
+    }
+
+    function searchExcerpts() {
+      renderExcerpts(document.getElementById('exSearch').value);
+    }
+
+    async function deleteExcerpt(id) {
+      if (!confirm('确定删除？')) return;
+      await fetch(`/api/excerpts/${id}`, { method: 'DELETE' });
+      await loadAllData();
+      renderExcerpts(document.getElementById('exSearch').value);
+    }
+
+    function generatePrompt() {
+      const today = new Date().toLocaleDateString('zh-CN');
+      const prompt = `你是一位专注于跨境法律的中国律师AI助手。请为今天（${today}）生成一份实用的每日推荐，重点围绕：
+
+1. 【涉外国际仲裁新闻与动态】：总结1-2条最新国际仲裁相关新闻、案例或规则更新（含中英文）。
+2. 【境外投资新规与合规】：总结近期与中国企业境外投资相关的重要新规或风险提示。
+3. 【实务建议】：给出一条具体可执行的工作建议。
+
+请用清晰结构化格式输出。`;
+      document.getElementById('ai-content').textContent = prompt;
+      navigator.clipboard?.writeText(prompt);
+      alert('提示词已复制，请到 Grok 生成后粘贴回来保存。');
+    }
+
+    function loadSampleAI() {
+      document.getElementById('ai-content').textContent = `【示例】涉外国际仲裁与境外投资动态已更新。请使用「生成提示词」获取最新内容。`;
+    }
+
+    async function saveAIContent() {
+      const content = document.getElementById('ai-paste').value.trim() || document.getElementById('ai-content').textContent;
+      if (!content) return;
+      await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      document.getElementById('ai-content').textContent = content;
+      document.getElementById('ai-paste').value = '';
+      alert('已保存到服务器！');
+      await loadAllData();
+    }
+
+    function quickSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      const url = q ? `https://grok.com/?q=${encodeURIComponent(q)}` : 'https://grok.com';
+      window.open(url, '_blank');
+    }
+
+    function requestNotification() {
+      Notification.requestPermission().then(p => {
+        alert(p === 'granted' ? '提醒已开启' : '权限被拒绝');
+      });
+    }
+
+    function checkReminders() {
+      // 可扩展
+    }
+  </script>
+</body>
+</html>

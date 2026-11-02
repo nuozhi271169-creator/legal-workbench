@@ -1,0 +1,13 @@
+{
+  "name": "legal-workbench-backend",
+  "version": "1.0.0",
+  "description": "法律人专业工作台 - 带后端版本",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
